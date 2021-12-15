@@ -1,0 +1,143 @@
+#define PIN_RELAY1 5
+#define PIN_RELAY2 3
+#define PIN_RELAY3 6
+#define PIN_RELAY4 9
+#define PIN_RELAY_ALL 0
+#define PIN_RELAY_NONE 100
+
+void setup()
+{
+ pinMode(PIN_RELAY1, OUTPUT);
+ digitalWrite(PIN_RELAY1, HIGH);
+ pinMode(PIN_RELAY2, OUTPUT);
+ digitalWrite(PIN_RELAY2, HIGH);
+ pinMode(PIN_RELAY3, OUTPUT);
+ digitalWrite(PIN_RELAY3, HIGH);
+ pinMode(PIN_RELAY4, OUTPUT);
+ digitalWrite(PIN_RELAY4, HIGH);
+
+ Serial.begin(9600);
+}
+
+void setRelay(int relay, bool on)
+{
+ if (relay == PIN_RELAY_NONE)
+ {
+  Serial.println("improper relay ID passed to setRelay - doing nothing");
+ }
+ else if (relay == PIN_RELAY_ALL)
+ {
+  digitalWrite(PIN_RELAY1, on ? LOW : HIGH);
+  digitalWrite(PIN_RELAY2, on ? LOW : HIGH);
+  digitalWrite(PIN_RELAY3, on ? LOW : HIGH);
+  digitalWrite(PIN_RELAY4, on ? LOW : HIGH);
+ }else
+ {
+  Serial.println("digitalWrite:");
+  Serial.println(relay);
+  Serial.println(on ? LOW : HIGH);
+  digitalWrite(relay, on ? LOW : HIGH);
+ }
+ 
+}
+
+void printUsage()
+{
+ Serial.println("Usage:");
+ Serial.println("10: turns FIRST relay OFF");
+ Serial.println("11: turns FIRST relay ON");
+ Serial.println("20: turns SECOND relay OFF");
+ Serial.println("21: turns SECOND relay ON");
+ Serial.println("30: turns THIRD relay OFF");
+ Serial.println("31: turns THIRD relay ON");
+ Serial.println("40: turns FOURTH relay OFF");
+ Serial.println("41: turns FOURTH relay ON");
+ Serial.println("50: turns ALL relay OFF");
+ Serial.println("51: turns ALL relay ON");
+ Serial.println("6<0-9>: turns ALL relay ON then wait 0-9 seconds then turn all OFF (e.g. 60 - immediate reset,  61 - 1 second poweroff, 69  - 9 seconds delay between power OFF and ON)");
+
+
+}
+
+int byteToInt(char aByte)
+{
+  String a = String(aByte);
+  return a.toInt();
+}
+
+bool isInputArgValid(char byte1, char byte2)
+{
+ int firstArg = byteToInt(byte1);
+ int secondArg = byteToInt(byte2);
+ if ( (firstArg>0 and firstArg<6) and (secondArg>=0 and secondArg<=1) )
+ {
+  return true;
+ }else if ( (firstArg==6) and (secondArg>=0 and secondArg<=9) )
+ {
+      return true;
+  }
+ return false;
+}
+
+int getRelayId(char relayId )
+{
+ String stringOne = String(relayId);
+ int relay = stringOne.toInt();
+ Serial.println("got RELAY:");
+ Serial.println(relay);
+ switch (relay)
+ {
+  case 1:
+   return PIN_RELAY1;
+  case 2:
+   return PIN_RELAY2;
+  case 3:
+   return PIN_RELAY3;
+  case 4:
+   return PIN_RELAY4;
+  case 5:
+   return PIN_RELAY_ALL;
+  default:
+   return PIN_RELAY_NONE;   
+ }
+}
+
+void loop()
+{
+ if (Serial.available() == 2) {
+  
+  char incomingByte1 = Serial.read();
+  char incomingByte2 = Serial.read();
+  if (!isInputArgValid(incomingByte1, incomingByte2))
+  {
+   printUsage();
+   return;
+  }
+    if (incomingByte1 =='6')
+    {
+        setRelay(PIN_RELAY_ALL, true);
+        if (byteToInt(incomingByte2) == 0)
+        {
+          delay(50);
+        }else{
+          delay(byteToInt(incomingByte2)*1000);
+        }
+        setRelay(PIN_RELAY_ALL, false);
+          return;
+    }
+  bool relayState = incomingByte2=='0' ? false : true;
+  setRelay(getRelayId(incomingByte1), relayState);
+  Serial.println("setting relay ");
+  Serial.println((char)incomingByte1);
+
+  if(incomingByte2 =='0')
+  {
+  Serial.println("OFF");
+  }
+  else if (incomingByte2 =='1')
+  {
+  Serial.println("ON");
+  }
+  
+ }
+}
